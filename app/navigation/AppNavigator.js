@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -6,12 +6,30 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import WelcomeScreen from '../screens/WelcomeScreen';
 import LoginScreen from '../screens/LoginScreen';
 import SignUpScreen from '../screens/SignUpScreen';
+import HomeScreen from '../screens/HomeScreen';
 import { COLORS } from '../constants/theme';
+import { supabase } from '../lib/supabase';
 
 const Stack = createNativeStackNavigator();
 
 export default function AppNavigator() {
-  const user = null;
+  const [session, setSession] = useState(null);
+
+  useEffect(() => {
+    // Check for existing session when app starts
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+    });
+
+    // Listen for auth state changes
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   return (
     <NavigationContainer>
@@ -21,9 +39,11 @@ export default function AppNavigator() {
           headerTintColor: COLORS.text,
         }}
       >
-        {user ? (
-          <Stack.Screen name="MainApp" component={() => <View><Text>Main App Screen</Text></View>} />
+        {session && session.user ? (
+          // Main app stack for authenticated users
+          <Stack.Screen name="Home" component={HomeScreen} options={{ title: 'Home' }} />
         ) : (
+          // Auth stack for non-authenticated users
           <>
             <Stack.Screen name="Welcome" component={WelcomeScreen} options={{ headerShown: false }} />
             <Stack.Screen name="Login" component={LoginScreen} options={{ title: 'Login' }} />
