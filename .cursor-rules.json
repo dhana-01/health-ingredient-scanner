@@ -1,0 +1,38 @@
+{
+    "project_description": "A mobile app built with React Native (Expo) that lets users scan food ingredient labels. The app uses the camera to take a picture, uploads it to Supabase Storage, and calls a Supabase Edge Function. The function uses Google Vision API for OCR and an LLM (like OpenAI's GPT) to analyze the ingredients for health insights. Results are stored in a Supabase PostgreSQL database and displayed to the user.",
+    "rules": [
+        
+      {
+        "rule": "Always use functional components with React Hooks. Avoid class components.",
+        "tags": ["react", "frontend"]
+      },
+      {
+        "rule": "The project uses a modular architecture. Place all screens in the `app/screens` directory, reusable components in `app/components`, navigation logic in `app/navigation`, and helper functions (like the Supabase client) in `app/lib`.",
+        "tags": ["architecture", "frontend"]
+      },
+      {
+        "rule": "For navigation, exclusively use the '@react-navigation/native-stack' library. Do not suggest other navigation libraries.",
+        "tags": ["navigation", "frontend"]
+      },
+      {
+        "rule": "Backend logic must be implemented as Supabase Edge Functions. These functions are written in TypeScript and act as our microservices/API.",
+        "tags": ["backend", "api", "supabase"]
+      },
+      {
+        "rule": "Never hardcode API keys or sensitive credentials in the source code. Always use environment variables (e.g., `process.env.EXPO_PUBLIC_SUPABASE_URL`) which are loaded from a `.env` file. The `.env` file must be in the `.gitignore`.",
+        "tags": ["security"]
+      },
+      {
+        "rule": "Git commit messages must follow the Conventional Commits specification. For example: `feat: add user login screen` or `fix: correct button alignment on auth page` or `docs: update project roadmap`.",
+        "tags": ["git", "version-control"]
+      },
+      {
+        "rule": "For styling, use the built-in StyleSheet API from React Native. Avoid introducing third-party styling libraries unless explicitly asked.",
+        "tags": ["styling", "frontend"]
+      },
+      {
+        "rule": "For all main screen layouts, wrap the entire screen's content in our custom `ScreenContainer` component, which should be imported from `app/components/ScreenContainer.js`. This component handles background color, safe area, and vertical centering.",
+        "tags": ["architecture", "frontend", "layout"]
+      }
+    ]
+  }
