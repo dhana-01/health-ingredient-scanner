@@ -21,7 +21,10 @@
     "react-native-screens": "^4.15.1",
     "react-native-url-polyfill": "^2.0.0",
     "expo-camera": "~16.1.11",
-    "expo-file-system": "~18.1.11"
+    "expo-file-system": "~18.1.11",
+    "react-dom": "19.0.0",
+    "react-native-web": "^0.20.0",
+    "@expo/metro-runtime": "~5.0.4"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0"
