@@ -29,7 +29,7 @@ export default function LoginScreen() {
   };
 
   return (
-    <ScreenContainer>
+    <ScreenContainer variant="form">
       <StyledTextInput
         label="Email"
         placeholder="name@example.com"
@@ -51,9 +51,5 @@ export default function LoginScreen() {
     </ScreenContainer>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {},
-});
 
 
