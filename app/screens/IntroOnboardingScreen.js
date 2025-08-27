@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView, Dimensions, Image } from 'react-nat
 import ScreenContainer from '../components/ScreenContainer';
 import StyledButton from '../components/StyledButton';
 import { COLORS, SPACING } from '../constants/theme';
+import { supabase } from '../lib/supabase';
 
 const { width } = Dimensions.get('window');
 
@@ -36,13 +37,15 @@ export default function IntroOnboardingScreen({ navigation }) {
     setCurrentSlide(slideIndex);
   };
 
-  const handleGetStarted = () => {
-    // Navigate to main app and complete onboarding
-    // In a real app, you'd save this preference to the database
-    navigation.reset({
-      index: 0,
-      routes: [{ name: 'Home' }],
-    });
+  const handleGetStarted = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    const userId = session?.user?.id;
+    if (!userId) return;
+    await supabase
+      .from('profiles')
+      .update({ has_completed_onboarding: true })
+      .eq('id', userId);
+    // Let AppNavigator react to the state change via onAuthStateChange/profile fetch
   };
 
   return (
