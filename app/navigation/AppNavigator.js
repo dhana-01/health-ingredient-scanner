@@ -1,13 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text } from 'react-native';
+import { View, ActivityIndicator } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
-import WelcomeScreen from '../screens/WelcomeScreen';
-import LoginScreen from '../screens/LoginScreen';
-import SignUpScreen from '../screens/SignUpScreen';
-import HomeScreen from '../screens/HomeScreen';
+import AuthNavigator from './AuthNavigator';
 import OnboardingNavigator from './OnboardingNavigator';
+import TabNavigator from './TabNavigator';
+import SplashScreen from '../screens/SplashScreen';
 import { COLORS } from '../constants/theme';
 import { supabase } from '../lib/supabase';
 
@@ -15,26 +14,90 @@ const Stack = createNativeStackNavigator();
 
 export default function AppNavigator() {
   const [session, setSession] = useState(null);
-  const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState(false);
+  const [profile, setProfile] = useState(null);
+  const [isProfileLoading, setIsProfileLoading] = useState(false);
 
   useEffect(() => {
-    // Check for existing session when app starts
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      // For now, we'll assume users need to complete onboarding
-      // In a real app, you'd check this from user preferences or database
-      setHasCompletedOnboarding(false);
+    let isMounted = true;
+
+    const init = async () => {
+      try {
+        const { data: sessionData } = await supabase.auth.getSession();
+        const currentSession = sessionData?.session ?? null;
+        if (!isMounted) return;
+        setSession(currentSession);
+
+        if (currentSession?.user?.id) {
+          setIsProfileLoading(true);
+          const { data: profiles, error } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', currentSession.user.id)
+            .single();
+          if (!isMounted) return;
+          if (!error) setProfile(profiles);
+        } else {
+          setProfile(null);
+        }
+      } catch (error) {
+        console.error('Error during initialization:', error);
+      } finally {
+        if (isMounted) {
+          setIsProfileLoading(false);
+        }
+      }
+    };
+
+    init();
+
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
+      setSession(newSession);
+      if (newSession?.user?.id) {
+        setIsProfileLoading(true);
+        try {
+          const { data: profiles, error } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', newSession.user.id)
+            .single();
+          if (!error) setProfile(profiles);
+        } catch (error) {
+          console.error('Error fetching profile:', error);
+        } finally {
+          setIsProfileLoading(false);
+        }
+      } else {
+        setProfile(null);
+      }
     });
 
-    // Listen for auth state changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-    });
-
-    return () => subscription.unsubscribe();
+    return () => {
+      isMounted = false;
+      authListener.subscription.unsubscribe();
+    };
   }, []);
+
+  const renderContent = () => {
+    if (!session) {
+      return <Stack.Screen name="Auth" component={AuthNavigator} options={{ headerShown: false }} />;
+    }
+
+    if (isProfileLoading || (!profile && session)) {
+      return (
+        <Stack.Screen
+          name="Loading"
+          options={{ headerShown: false }}
+          component={SplashScreen}
+        />
+      );
+    }
+
+    if (profile && profile.has_completed_onboarding === false) {
+      return <Stack.Screen name="Onboarding" component={OnboardingNavigator} options={{ headerShown: false }} />;
+    }
+
+    return <Stack.Screen name="Main" component={TabNavigator} options={{ headerShown: false }} />;
+  };
 
   return (
     <NavigationContainer>
@@ -42,29 +105,10 @@ export default function AppNavigator() {
         screenOptions={{
           headerStyle: { backgroundColor: COLORS.background },
           headerTintColor: COLORS.text,
+          headerTitleStyle: { color: COLORS.text },
         }}
       >
-        {session && session.user ? (
-          // Check if user has completed onboarding
-          hasCompletedOnboarding ? (
-            // Main app stack for authenticated users who completed onboarding
-            <Stack.Screen name="Home" component={HomeScreen} options={{ title: 'Home' }} />
-          ) : (
-            // Onboarding flow for authenticated users
-            <Stack.Screen 
-              name="Onboarding" 
-              component={OnboardingNavigator} 
-              options={{ headerShown: false }} 
-            />
-          )
-        ) : (
-          // Auth stack for non-authenticated users
-          <>
-            <Stack.Screen name="Welcome" component={WelcomeScreen} options={{ headerShown: false }} />
-            <Stack.Screen name="Login" component={LoginScreen} options={{ title: 'Login' }} />
-            <Stack.Screen name="SignUp" component={SignUpScreen} options={{ title: 'Sign Up' }} />
-          </>
-        )}
+        {renderContent()}
       </Stack.Navigator>
     </NavigationContainer>
   );
