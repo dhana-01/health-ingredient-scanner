@@ -34,5 +34,7 @@
         "rule": "For all main screen layouts, wrap the entire screen's content in our custom `ScreenContainer` component, which should be imported from `app/components/ScreenContainer.js`. This component handles background color, safe area, and vertical centering.",
         "tags": ["architecture", "frontend", "layout"]
       }
+      
+      
     ]
   }

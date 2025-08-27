@@ -36,11 +36,34 @@ export default function SignUpScreen() {
   };
 
   return (
-    <ScreenContainer>
-      <StyledTextInput label="Full Name" value={fullName} onChangeText={setFullName} placeholder="John Doe" />
-      <StyledTextInput label="Email" value={email} onChangeText={setEmail} placeholder="john.doe@example.com" />
-      <StyledTextInput label="Password" value={password} onChangeText={setPassword} placeholder="Enter your password" secureTextEntry />
-      <StyledTextInput label="Confirm Password" value={confirmPassword} onChangeText={setConfirmPassword} placeholder="Confirm your password" secureTextEntry />
+    <ScreenContainer variant="form">
+      <StyledTextInput 
+        label="Full Name" 
+        value={fullName} 
+        onChangeText={setFullName} 
+        placeholder="John Doe" 
+        autoCapitalize="words"
+      />
+      <StyledTextInput 
+        label="Email" 
+        value={email} 
+        onChangeText={setEmail} 
+        placeholder="john.doe@example.com" 
+      />
+      <StyledTextInput 
+        label="Password" 
+        value={password} 
+        onChangeText={setPassword} 
+        placeholder="Enter your password" 
+        secureTextEntry 
+      />
+      <StyledTextInput 
+        label="Confirm Password" 
+        value={confirmPassword} 
+        onChangeText={setConfirmPassword} 
+        placeholder="Confirm your password" 
+        secureTextEntry 
+      />
 
       <View style={styles.termsRow}>
         <Switch value={agreed} onValueChange={setAgreed} thumbColor={agreed ? COLORS.primary : '#666'} />
@@ -52,7 +75,6 @@ export default function SignUpScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {},
   termsRow: {
     flexDirection: 'row',
     alignItems: 'center',
