@@ -7,6 +7,7 @@ import AuthNavigator from './AuthNavigator';
 import OnboardingNavigator from './OnboardingNavigator';
 import TabNavigator from './TabNavigator';
 import SplashScreen from '../screens/SplashScreen';
+import { UserProvider } from '../context/UserContext';
 import { COLORS } from '../constants/theme';
 import { supabase } from '../lib/supabase';
 
@@ -93,10 +94,30 @@ export default function AppNavigator() {
     }
 
     if (profile && profile.has_completed_onboarding === false) {
-      return <Stack.Screen name="Onboarding" component={OnboardingNavigator} options={{ headerShown: false }} />;
+      return (
+        <Stack.Screen 
+          name="Onboarding" 
+          component={() => (
+            <UserProvider>
+              <OnboardingNavigator />
+            </UserProvider>
+          )} 
+          options={{ headerShown: false }} 
+        />
+      );
     }
 
-    return <Stack.Screen name="Main" component={TabNavigator} options={{ headerShown: false }} />;
+    return (
+      <Stack.Screen 
+        name="Main" 
+        component={() => (
+          <UserProvider>
+            <TabNavigator />
+          </UserProvider>
+        )} 
+        options={{ headerShown: false }} 
+      />
+    );
   };
 
   return (
