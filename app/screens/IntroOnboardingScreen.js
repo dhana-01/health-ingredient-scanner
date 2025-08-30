@@ -1,8 +1,8 @@
 import React, { useState, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, Dimensions, Image } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Dimensions, Image, TouchableOpacity } from 'react-native';
 import ScreenContainer from '../components/ScreenContainer';
 import StyledButton from '../components/StyledButton';
-import { COLORS, SPACING } from '../constants/theme';
+import { COLORS, SPACING, RADIUS } from '../constants/theme';
 import { supabase } from '../lib/supabase';
 
 const { width } = Dimensions.get('window');
@@ -50,7 +50,7 @@ export default function IntroOnboardingScreen({ navigation }) {
 
   return (
     <ScreenContainer>
-      <View style={styles.content}>
+      <View style={styles.container}>
         <ScrollView
           ref={scrollViewRef}
           horizontal
@@ -71,12 +71,19 @@ export default function IntroOnboardingScreen({ navigation }) {
 
         <View style={styles.pagination}>
           {slides.map((_, index) => (
-            <View
+            <TouchableOpacity
               key={index}
               style={[
                 styles.paginationDot,
                 index === currentSlide && styles.paginationDotActive,
               ]}
+              activeOpacity={0.7}
+              onPress={() => {
+                scrollViewRef.current?.scrollTo({
+                  x: index * width,
+                  animated: true,
+                });
+              }}
             />
           ))}
         </View>
@@ -94,7 +101,7 @@ export default function IntroOnboardingScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  content: {
+  container: {
     flex: 1,
     width: '100%',
   },
@@ -121,7 +128,7 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.md,
   },
   description: {
-    color: COLORS.text,
+    color: COLORS.secondaryText,
     fontSize: 16,
     textAlign: 'center',
     lineHeight: 22,
@@ -148,5 +155,6 @@ const styles = StyleSheet.create({
   },
   buttonContainer: {
     marginBottom: SPACING.lg,
+    paddingHorizontal: SPACING.lg,
   },
 });

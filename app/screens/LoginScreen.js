@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, Alert } from 'react-native';
+import { View, StyleSheet, Alert, ScrollView } from 'react-native';
 import StyledTextInput from '../components/StyledTextInput';
 import StyledButton from '../components/StyledButton';
 import SocialButton from '../components/SocialButton';
-import { COLORS, SPACING } from '../constants/theme';
+import { COLORS, SPACING, RADIUS } from '../constants/theme';
 import ScreenContainer from '../components/ScreenContainer';
 import { supabase } from '../lib/supabase';
 
@@ -29,27 +29,59 @@ export default function LoginScreen() {
   };
 
   return (
-    <ScreenContainer variant="form">
-      <StyledTextInput
-        label="Email"
-        placeholder="name@example.com"
-        value={email}
-        onChangeText={setEmail}
-        keyboardType="email-address"
-      />
-      <StyledTextInput
-        label="Password"
-        placeholder="Enter your password"
-        value={password}
-        onChangeText={setPassword}
-        secureTextEntry
-      />
-      <StyledButton title="Login" variant="primary" onPress={handleLogin} />
-      <View style={{ height: SPACING.md }} />
-      <SocialButton title="Continue with Google" />
-      <SocialButton title="Continue with Apple" />
+    <ScreenContainer>
+      <ScrollView 
+        style={styles.container}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.content}
+      >
+        <StyledTextInput
+          label="Email"
+          placeholder="name@example.com"
+          value={email}
+          onChangeText={setEmail}
+          keyboardType="email-address"
+        />
+        <StyledTextInput
+          label="Password"
+          placeholder="Enter your password"
+          value={password}
+          onChangeText={setPassword}
+          secureTextEntry
+        />
+        
+        <StyledButton 
+          title="Login" 
+          variant="primary" 
+          onPress={handleLogin} 
+        />
+        
+        <View style={styles.divider} />
+        
+        <SocialButton 
+          title="Continue with Google" 
+          activeOpacity={0.8}
+        />
+        <SocialButton 
+          title="Continue with Apple" 
+          activeOpacity={0.8}
+        />
+      </ScrollView>
     </ScreenContainer>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  content: {
+    padding: SPACING.lg,
+    paddingBottom: SPACING.xl * 2, // Extra padding for bottom nav
+  },
+  divider: {
+    height: SPACING.lg,
+  },
+});
 
 
