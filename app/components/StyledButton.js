@@ -1,47 +1,30 @@
 import React from 'react';
 import { TouchableOpacity, Text, StyleSheet } from 'react-native';
-import { COLORS, SPACING, RADIUS } from '../constants/theme';
 
-export default function StyledButton({ title, onPress, variant = 'primary', disabled }) {
-  const isPrimary = variant === 'primary';
+const COLORS = {
+  primary: '#289484',
+  white: '#FFFFFF',
+};
+
+export default function StyledButton({ title, onPress, style, disabled }) {
   return (
-    <TouchableOpacity
-      onPress={onPress}
-      disabled={disabled}
-      style={[styles.base, isPrimary ? styles.primary : styles.secondary, disabled && { opacity: 0.6 }]}
-      activeOpacity={0.8}
-    >
-      <Text style={[styles.text, isPrimary ? styles.primaryText : styles.secondaryText]}>{title}</Text>
+    <TouchableOpacity style={[styles.button, style, disabled && { opacity: 0.7 }]} onPress={onPress} activeOpacity={0.85} disabled={disabled}>
+      <Text style={styles.title}>{title}</Text>
     </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
-  base: {
-    height: 48,
-    borderRadius: RADIUS.pill,
+  button: {
+    backgroundColor: COLORS.primary,
+    borderRadius: 12,
+    paddingVertical: 14,
     alignItems: 'center',
     justifyContent: 'center',
-    marginVertical: SPACING.sm,
-    borderWidth: 1,
   },
-  primary: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
-  },
-  secondary: {
-    backgroundColor: 'transparent',
-    borderColor: COLORS.white,
-  },
-  text: {
-    fontWeight: '600',
-  },
-  primaryText: {
+  title: {
     color: COLORS.white,
-  },
-  secondaryText: {
-    color: COLORS.white,
+    fontSize: 16,
+    fontWeight: '700',
   },
 });
-
-

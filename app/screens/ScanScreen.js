@@ -1,10 +1,16 @@
-import React, { useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import React, { useRef, useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
+import { useNavigation } from '@react-navigation/native';
+import * as FileSystem from 'expo-file-system';
+import { supabase } from '../lib/supabase';
+import { BlurView } from 'expo-blur';
 
 export default function ScanScreen() {
   const cameraRef = useRef(null);
   const [permission, requestPermission] = useCameraPermissions();
+  const navigation = useNavigation();
+  const [isLoading, setIsLoading] = useState(false);
 
   if (!permission) {
     return <View style={styles.container} />;
@@ -21,12 +27,87 @@ export default function ScanScreen() {
     );
   }
 
-  const handleCapture = async () => {
+  const handleTakePicture = async () => {
     try {
-      if (cameraRef.current) {
-        await cameraRef.current.takePictureAsync();
+      setIsLoading(true);
+
+      if (!cameraRef.current) {
+        throw new Error('Camera is not ready');
       }
-    } catch (e) {}
+
+      const photo = await cameraRef.current.takePictureAsync({ quality: 0.9, skipProcessing: true });
+      if (!photo?.uri) {
+        throw new Error('Failed to capture image');
+      }
+
+      console.log('1. Picture taken successfully. URI:', photo.uri);
+
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      if (userError || !userData?.user?.id) {
+        throw new Error('You must be signed in to scan');
+      }
+
+      const userId = userData.user.id;
+      const timestamp = Date.now();
+      const fileExt = (photo.uri.split('.').pop() || 'jpg').toLowerCase();
+      const fileName = `${userId}_${timestamp}.${fileExt}`;
+      const filePath = `${userId}/${fileName}`;
+
+      // Read file and upload to Supabase Storage
+      // Prefer blob upload for reliability in React Native
+      const response = await fetch(photo.uri);
+      const blob = await response.blob();
+      console.log('2. Preparing to upload file...');
+
+      const uploadResponse = await supabase.storage
+        .from('scanned-images')
+        .upload(filePath, blob, {
+          contentType: blob.type || 'image/jpeg',
+          upsert: false,
+        });
+
+      console.log('3. Upload successful. Response:', uploadResponse);
+
+      if (uploadResponse?.error) {
+        throw uploadResponse.error;
+      }
+
+      const { data: publicData } = supabase.storage
+        .from('scanned-images')
+        .getPublicUrl(filePath);
+
+      const publicUrl = publicData?.publicUrl;
+      if (!publicUrl) {
+        throw new Error('Could not get public image URL');
+      }
+
+      console.log('4. Got public URL:', publicUrl);
+
+      console.log('5. Invoking Edge Function...');
+      const { data, error } = await supabase.functions.invoke('analyze-ingredient-image', {
+        body: { imageUrl: publicUrl },
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      navigation.navigate('Result', { analysis: data, imageUrl: publicUrl });
+    } catch (error) {
+      console.error('An error occurred in handleTakePicture:', error);
+      
+      // Check if it's an Edge Function error with a specific message
+      let message;
+      if (error?.data?.error) {
+        message = error.data.error;
+      } else {
+        message = error?.message || 'Something went wrong while analyzing the image';
+      }
+      
+      Alert.alert('Scan Error', message);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -52,13 +133,23 @@ export default function ScanScreen() {
           zoom={0}
         />
 
+        {isLoading && (
+          <View style={styles.loadingOverlay} pointerEvents="none">
+            <BlurView intensity={40} tint="dark" style={styles.blurFill} />
+            <View style={styles.loaderContent}>
+              <ActivityIndicator size="large" color="#FFFFFF" />
+              <Text style={styles.loadingText}>Analyzing...</Text>
+            </View>
+          </View>
+        )}
+
         {/* Shaded borders to simulate top/bottom framing */}
         <View style={styles.topShade} pointerEvents="none" />
         <View style={styles.bottomShade} pointerEvents="none" />
 
         {/* Capture button */}
         <View style={styles.bottomControls} pointerEvents="box-none">
-          <TouchableOpacity style={styles.captureButton} onPress={handleCapture} activeOpacity={0.8}>
+          <TouchableOpacity style={styles.captureButton} onPress={handleTakePicture} activeOpacity={0.8} disabled={isLoading}>
             <View style={styles.captureInner} />
           </TouchableOpacity>
         </View>
@@ -151,6 +242,24 @@ const styles = StyleSheet.create({
     height: 56,
     borderRadius: 28,
     backgroundColor: '#E6EEF2',
+  },
+  loadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  blurFill: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  loaderContent: {
+    position: 'absolute',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 12,
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
   },
   permissionText: {
     color: '#FFFFFF',
