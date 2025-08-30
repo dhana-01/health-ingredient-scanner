@@ -1,200 +1,179 @@
-import React, { useState, useEffect } from 'react';
-import { View, ActivityIndicator } from 'react-native';
+// File: app/navigation/AppNavigator.js
+
+import React, { useState, useEffect, useCallback } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-
-import AuthNavigator from './AuthNavigator';
-import OnboardingNavigator from './OnboardingNavigator';
-import TabNavigator from './TabNavigator';
-import SplashScreen from '../screens/SplashScreen';
-import { UserProvider } from '../context/UserContext';
-import { COLORS } from '../constants/theme';
 import { supabase } from '../lib/supabase';
 
-// Component wrappers to avoid inline functions
-const OnboardingWrapper = () => (
-  <UserProvider>
-    <OnboardingNavigator />
-  </UserProvider>
-);
-
-const MainWrapper = () => (
-  <UserProvider>
-    <TabNavigator />
-  </UserProvider>
-);
+// Import all our navigators and screens
+import AuthNavigator from './AuthNavigator';
+import OnboardingNavigator from './OnboardingNavigator';
+import MainStackNavigator from './MainStackNavigator';
+import SplashScreen from '../screens/SplashScreen';
 
 const Stack = createNativeStackNavigator();
 
 export default function AppNavigator() {
-  const [session, setSession] = useState(null);
-  const [profile, setProfile] = useState(null);
-  const [isProfileLoading, setIsProfileLoading] = useState(false);
+  const [appState, setAppState] = useState('loading'); // 'loading' | 'auth' | 'onboarding' | 'main'
+  const [userProfile, setUserProfile] = useState(null);
+  const [isInitializing, setIsInitializing] = useState(true);
 
-  useEffect(() => {
-    let isMounted = true;
+  // Simplified profile fetching with better error handling
+  const fetchUserProfile = useCallback(async (userId) => {
+    try {
+      console.log('Fetching profile for user:', userId);
+      
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .maybeSingle(); // Use maybeSingle instead of single to avoid coercion errors
 
-    // Add a timeout to prevent infinite loading
-    const timeoutId = setTimeout(() => {
-      if (isMounted && isProfileLoading) {
-        console.warn('Profile loading timeout, forcing to auth screen');
-        setIsProfileLoading(false);
-        setProfile(null);
+      if (error) {
+        console.error('Profile fetch error:', error.message);
+        return null;
       }
-    }, 10000); // 10 second timeout
-
-    const init = async () => {
-      try {
-        console.log('Starting app initialization...');
-        
-        // Check if Supabase is properly configured
-        if (!process.env.EXPO_PUBLIC_SUPABASE_URL || !process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY) {
-          console.error('Missing Supabase environment variables');
-          throw new Error('Supabase configuration missing');
-        }
-
-        const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-        if (sessionError) {
-          console.error('Error getting session:', sessionError);
-          throw sessionError;
-        }
-        
-        const currentSession = sessionData?.session ?? null;
-        console.log('Session check result:', { hasSession: !!currentSession, userId: currentSession?.user?.id });
-        
-        if (!isMounted) return;
-        setSession(currentSession);
-
-        if (currentSession?.user?.id) {
-          setIsProfileLoading(true);
-          console.log('Fetching profile for user:', currentSession.user.id);
-          
-          const { data: profiles, error } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', currentSession.user.id)
-            .single();
-          
-          if (!isMounted) return;
-          
-          if (error) {
-            console.error('Error fetching profile:', error);
-            // Don't throw here, just set profile to null
-            setProfile(null);
-          } else {
-            console.log('Profile fetched successfully:', profiles);
-            setProfile(profiles);
-          }
-        } else {
-          console.log('No session found, setting profile to null');
-          setProfile(null);
-        }
-      } catch (error) {
-        console.error('Error during initialization:', error);
-        // Set loading to false even on error to prevent infinite loading
-        if (isMounted) {
-          setIsProfileLoading(false);
-        }
-      } finally {
-        if (isMounted) {
-          setIsProfileLoading(false);
-        }
-      }
-    };
-
-    init();
-
-    const { data: authListener } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
-      setSession(newSession);
-      if (newSession?.user?.id) {
-        setIsProfileLoading(true);
-        try {
-          const { data: profiles, error } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', newSession.user.id)
-            .single();
-          if (!error) setProfile(profiles);
-        } catch (error) {
-          console.error('Error fetching profile:', error);
-        } finally {
-          setIsProfileLoading(false);
-        }
-      } else {
-        setProfile(null);
-      }
-    });
-
-    return () => {
-      isMounted = false;
-      clearTimeout(timeoutId);
-      authListener.subscription.unsubscribe();
-    };
+      
+      console.log('Profile fetched successfully:', data ? 'Profile found' : 'No profile');
+      return data;
+    } catch (error) {
+      console.error('Profile fetch exception:', error.message);
+      return null;
+    }
   }, []);
 
-  const renderContent = () => {
-    // Debug logging
-    console.log('AppNavigator state:', {
-      session: !!session,
-      profile: !!profile,
-      isProfileLoading,
-      hasCompletedOnboarding: profile?.has_completed_onboarding
-    });
-
-    // Show loading screen while checking session and profile
-    if (isProfileLoading) {
-      console.log('Showing loading screen');
-      return (
-        <Stack.Screen
-          name="Loading"
-          options={{ headerShown: false }}
-          component={SplashScreen}
-        />
-      );
-    }
-
-    // No session - show auth
+  // Centralized app state management
+  const updateAppState = useCallback(async (session) => {
+    console.log('Updating app state, session:', session ? 'exists' : 'none');
+    
     if (!session) {
-      return <Stack.Screen name="Auth" component={AuthNavigator} options={{ headerShown: false }} />;
+      console.log('No session, setting app state to auth');
+      setAppState('auth');
+      setUserProfile(null);
+      return;
     }
 
-    // Has session but no profile - this shouldn't happen, but show auth as fallback
+    // User is logged in - check their profile
+    console.log('Session exists, fetching profile...');
+    const profile = await fetchUserProfile(session.user.id);
+    
     if (!profile) {
-      console.warn('Session exists but no profile found, redirecting to auth');
-      return <Stack.Screen name="Auth" component={AuthNavigator} options={{ headerShown: false }} />;
+      // Profile doesn't exist - this shouldn't happen with our SQL trigger
+      // but we'll handle it gracefully
+      console.log('No profile found, setting app state to auth');
+      setAppState('auth');
+      setUserProfile(null);
+      return;
     }
 
-    // Has profile but hasn't completed onboarding
-    if (profile.has_completed_onboarding === false) {
-      return (
-        <Stack.Screen 
-          name="Onboarding" 
-          component={OnboardingWrapper} 
-          options={{ headerShown: false }} 
-        />
-      );
+    console.log('Profile found, onboarding status:', profile.has_completed_onboarding);
+    setUserProfile(profile);
+    
+    if (profile.has_completed_onboarding) {
+      console.log('Onboarding completed, setting app state to main');
+      setAppState('main');
+    } else {
+      console.log('Onboarding incomplete, setting app state to onboarding');
+      setAppState('onboarding');
     }
+  }, [fetchUserProfile]);
 
-    // Has profile and completed onboarding - show main app
-    return (
-      <Stack.Screen 
-        name="Main" 
-        component={MainWrapper} 
-        options={{ headerShown: false }} 
-      />
+  // Profile refresh function - called after onboarding completion
+  const refreshUserProfile = useCallback(async () => {
+    console.log('Refreshing user profile...');
+    if (userProfile?.id) {
+      const updatedProfile = await fetchUserProfile(userProfile.id);
+      if (updatedProfile) {
+        setUserProfile(updatedProfile);
+        if (updatedProfile.has_completed_onboarding) {
+          console.log('Profile refreshed, onboarding completed, setting app state to main');
+          setAppState('main');
+        }
+      }
+    }
+  }, [userProfile?.id, fetchUserProfile]);
+
+  // Expose refresh function globally for onboarding screens
+  useEffect(() => {
+    global.refreshUserProfile = refreshUserProfile;
+    return () => {
+      delete global.refreshUserProfile;
+    };
+  }, [refreshUserProfile]);
+
+  useEffect(() => {
+    // Initial session check with proper splash screen timing
+    const initializeApp = async () => {
+      try {
+        console.log('Initializing app...');
+        
+        // Add a minimum splash screen duration for better UX
+        const startTime = Date.now();
+        const minSplashDuration = 1500; // 1.5 seconds minimum
+        
+        const { data: { session } } = await supabase.auth.getSession();
+        console.log('Initial session check completed');
+        
+        await updateAppState(session);
+        
+        // Ensure splash screen shows for minimum duration
+        const elapsed = Date.now() - startTime;
+        if (elapsed < minSplashDuration) {
+          await new Promise(resolve => setTimeout(resolve, minSplashDuration - elapsed));
+        }
+        
+        console.log('App initialization completed, setting loading to false');
+        setIsInitializing(false);
+        
+      } catch (error) {
+        console.error('App initialization error:', error.message);
+        setAppState('auth');
+        setIsInitializing(false);
+      }
+    };
+
+    initializeApp();
+
+    // Auth state change listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        console.log('Auth state change:', event, session?.user?.id);
+        await updateAppState(session);
+      }
     );
+
+    return () => subscription.unsubscribe();
+  }, [updateAppState]);
+
+  // Render the appropriate navigator based on app state
+  const renderNavigator = () => {
+    // Always show splash screen during initialization
+    if (isInitializing) {
+      return <Stack.Screen name="Splash" component={SplashScreen} />;
+    }
+
+    switch (appState) {
+      case 'loading':
+        return <Stack.Screen name="Splash" component={SplashScreen} />;
+      
+      case 'auth':
+        return <Stack.Screen name="Auth" component={AuthNavigator} />;
+      
+      case 'onboarding':
+        return <Stack.Screen name="Onboarding" component={OnboardingNavigator} />;
+      
+      case 'main':
+        return <Stack.Screen name="MainApp" component={MainStackNavigator} />;
+      
+      default:
+        return <Stack.Screen name="Splash" component={SplashScreen} />;
+    }
   };
 
   return (
     <NavigationContainer>
-      <Stack.Navigator
-        screenOptions={{
-          headerStyle: { backgroundColor: COLORS.background },
-          headerTintColor: COLORS.text,
-          headerTitleStyle: { color: COLORS.text },
-        }}
-      >
-        {renderContent()}
+      <Stack.Navigator screenOptions={{ headerShown: false }}>
+        {renderNavigator()}
       </Stack.Navigator>
     </NavigationContainer>
   );

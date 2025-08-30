@@ -10,9 +10,16 @@ import { supabase } from '../lib/supabase';
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleLogin = async () => {
+    if (!email || !password) {
+      Alert.alert('Error', 'Please fill in all fields');
+      return;
+    }
+
     try {
+      setIsLoading(true);
       const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -20,11 +27,12 @@ export default function LoginScreen() {
 
       if (error) {
         Alert.alert('Error', error.message);
-      } else {
-        Alert.alert('Success', 'Logged in successfully!');
       }
+      // Navigation will happen automatically via AppNavigator's auth state listener
     } catch (error) {
       Alert.alert('Error', 'An unexpected error occurred');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -51,9 +59,10 @@ export default function LoginScreen() {
         />
         
         <StyledButton 
-          title="Login" 
+          title={isLoading ? "Logging in..." : "Login"} 
           variant="primary" 
-          onPress={handleLogin} 
+          onPress={handleLogin}
+          disabled={isLoading}
         />
         
         <View style={styles.divider} />
