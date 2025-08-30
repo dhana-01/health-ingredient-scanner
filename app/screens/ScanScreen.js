@@ -5,6 +5,7 @@ import { useNavigation } from '@react-navigation/native';
 import * as FileSystem from 'expo-file-system';
 import { supabase } from '../lib/supabase';
 import { BlurView } from 'expo-blur';
+import ScreenHeader from '../components/ScreenHeader';
 
 export default function ScanScreen() {
   const cameraRef = useRef(null);
@@ -114,7 +115,7 @@ export default function ScanScreen() {
     <View style={styles.container}>
       {/* Top header and divider */}
       <View style={styles.headerBar}>
-        <Text style={styles.headerTitle}>Scan</Text>
+        <ScreenHeader title="Scan" />
       </View>
       <View style={styles.headerDivider} />
 

@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SPACING, RADIUS } from '../constants/theme';
 import { useUser } from '../context/UserContext';
 import ScanCard from '../components/ScanCard';
+import ScreenHeader from '../components/ScreenHeader';
 
 export default function HomeScreen() {
   const { profile } = useUser();
@@ -63,7 +64,7 @@ export default function HomeScreen() {
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       {/* Top Header Title and Divider */}
       <View style={styles.headerContainer}>
-        <Text style={styles.headerTitle}>Home</Text>
+        <ScreenHeader title="Home" />
         <View style={styles.headerDivider} />
       </View>
 

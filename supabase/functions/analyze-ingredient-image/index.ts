@@ -160,7 +160,7 @@ IMPORTANT: Only return valid JSON. Do not include any other text or formatting.`
     console.error('Error in analyze-ingredient-image function:', error);
     
     return new Response(
-      JSON.stringify({ error: error.message || 'Internal server error' }),
+      JSON.stringify({ error: `Internal Server Error: ${error.message}` }),
       { 
         status: 500, 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
