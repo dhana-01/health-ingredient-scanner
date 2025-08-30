@@ -1,11 +1,12 @@
 import React, { useContext } from 'react';
-import { View, Text, StyleSheet, ScrollView, FlatList, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, FlatList, TouchableOpacity, Button } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SPACING, RADIUS } from '../constants/theme';
 import { useUser } from '../context/UserContext';
 import ScanCard from '../components/ScanCard';
 import ScreenHeader from '../components/ScreenHeader';
+import { supabase } from '../lib/supabase';
 
 export default function HomeScreen() {
   const { profile } = useUser();
@@ -51,6 +52,15 @@ export default function HomeScreen() {
     navigation.navigate('History');
   };
 
+  const handleLogAccessToken = async () => {
+    try {
+      const session = await supabase.auth.getSession();
+      console.log('USER ACCESS TOKEN:', session.data.session.access_token);
+    } catch (error) {
+      console.error('Error getting access token:', error);
+    }
+  };
+
   const renderScanCard = ({ item }) => (
     <ScanCard
       imageSource={item.imageSource}
@@ -77,6 +87,13 @@ export default function HomeScreen() {
           <Ionicons name="scan-outline" size={22} color="white" style={styles.scanIcon} />
           <Text style={styles.quickScanText}>Quick Scan</Text>
         </TouchableOpacity>
+
+        {/* Temporary button for testing - Remove after testing */}
+        <Button 
+          title="Log Access Token" 
+          onPress={handleLogAccessToken}
+          color={COLORS.primary}
+        />
       </View>
 
       {/* Recent Scans Section */}
