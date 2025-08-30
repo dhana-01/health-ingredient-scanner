@@ -4,6 +4,7 @@ import ScreenContainer from '../components/ScreenContainer';
 import StyledButton from '../components/StyledButton';
 import { COLORS, SPACING, RADIUS } from '../constants/theme';
 import { supabase } from '../lib/supabase';
+import { completeOnboarding } from '../navigation/OnboardingNavigator';
 
 const { width } = Dimensions.get('window');
 
@@ -38,14 +39,19 @@ export default function IntroOnboardingScreen({ navigation }) {
   };
 
   const handleGetStarted = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    const userId = session?.user?.id;
-    if (!userId) return;
-    await supabase
-      .from('profiles')
-      .update({ has_completed_onboarding: true })
-      .eq('id', userId);
-    // Let AppNavigator react to the state change via onAuthStateChange/profile fetch
+    try {
+      const result = await completeOnboarding();
+      if (result.success) {
+        // The AppNavigator will automatically detect the profile change
+        // and navigate to the main app - no manual navigation needed
+        console.log('Onboarding completed successfully!');
+      } else {
+        console.error('Failed to complete onboarding:', result.error);
+        // You could show an alert here if needed
+      }
+    } catch (error) {
+      console.error('Error in handleGetStarted:', error.message);
+    }
   };
 
   return (

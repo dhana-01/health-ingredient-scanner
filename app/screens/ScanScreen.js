@@ -2,7 +2,6 @@ import React, { useRef, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useNavigation } from '@react-navigation/native';
-import * as FileSystem from 'expo-file-system';
 import { supabase } from '../lib/supabase';
 import { BlurView } from 'expo-blur';
 import ScreenHeader from '../components/ScreenHeader';
@@ -36,64 +35,46 @@ export default function ScanScreen() {
         throw new Error('Camera is not ready');
       }
 
-      const photo = await cameraRef.current.takePictureAsync({ quality: 0.9, skipProcessing: true });
-      if (!photo?.uri) {
+      const photo = await cameraRef.current.takePictureAsync({ quality: 0.8, base64: true });
+      if (!photo?.base64) {
         throw new Error('Failed to capture image');
       }
 
-      console.log('1. Picture taken successfully. URI:', photo.uri);
+      console.log('1. Picture taken successfully. Base64 length:', photo.base64.length);
 
-      const { data: userData, error: userError } = await supabase.auth.getUser();
-      if (userError || !userData?.user?.id) {
-        throw new Error('You must be signed in to scan');
-      }
-
-      const userId = userData.user.id;
-      const timestamp = Date.now();
-      const fileExt = (photo.uri.split('.').pop() || 'jpg').toLowerCase();
-      const fileName = `${userId}_${timestamp}.${fileExt}`;
-      const filePath = `${userId}/${fileName}`;
-
-      // Read file and upload to Supabase Storage
-      // Prefer blob upload for reliability in React Native
-      const response = await fetch(photo.uri);
-      const blob = await response.blob();
-      console.log('2. Preparing to upload file...');
-
-      const uploadResponse = await supabase.storage
-        .from('scanned-images')
-        .upload(filePath, blob, {
-          contentType: blob.type || 'image/jpeg',
-          upsert: false,
-        });
-
-      console.log('3. Upload successful. Response:', uploadResponse);
-
-      if (uploadResponse?.error) {
-        throw uploadResponse.error;
-      }
-
-      const { data: publicData } = supabase.storage
-        .from('scanned-images')
-        .getPublicUrl(filePath);
-
-      const publicUrl = publicData?.publicUrl;
-      if (!publicUrl) {
-        throw new Error('Could not get public image URL');
-      }
-
-      console.log('4. Got public URL:', publicUrl);
-
-      console.log('5. Invoking Edge Function...');
-      const { data, error } = await supabase.functions.invoke('analyze-ingredient-image', {
-        body: { imageUrl: publicUrl },
+      // Step 1: Get AI analysis
+      console.log('2. Calling analyze-ingredient-image function...');
+      const { data: analysisData, error: analysisError } = await supabase.functions.invoke('analyze-ingredient-image', {
+        body: { imageBase64: photo.base64 },
       });
 
-      if (error) {
-        throw error;
+      if (analysisError) {
+        throw analysisError;
       }
 
-      navigation.navigate('Result', { analysis: data, imageUrl: publicUrl });
+      console.log('3. Analysis received successfully');
+
+      // Step 2: Save to history
+      console.log('4. Calling save-scan-history function...');
+      const { data: saveData, error: saveError } = await supabase.functions.invoke('save-scan-history', {
+        body: { 
+          analysis: analysisData, 
+          imageBase64: photo.base64 
+        },
+      });
+
+      if (saveError) {
+        throw saveError;
+      }
+
+      console.log('5. Scan saved successfully');
+
+      // Navigate to Result screen
+      navigation.navigate('Result', { 
+        analysis: analysisData, 
+        imageBase64: photo.base64 
+      });
+
     } catch (error) {
       console.error('An error occurred in handleTakePicture:', error);
       
@@ -194,12 +175,13 @@ const styles = StyleSheet.create({
   cameraFrame: {
     flex: 1,
     marginHorizontal: 12,
+    marginTop: 20, // Add more padding from the top
     marginBottom: 12,
     borderRadius: 16,
     overflow: 'hidden',
     position: 'relative',
     backgroundColor: '#000',
-    borderWidth: 1,
+    borderWidth: 0.5, // Reduce border from 1 to 0.5
     borderColor: '#1f1f1f',
   },
   camera: {

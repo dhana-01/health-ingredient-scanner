@@ -8,14 +8,15 @@ export default function WelcomeScreen({ navigation }) {
   return (
     <ScreenContainer>
       <View style={styles.contentContainer}>
-        <Image source={require('../assets/icon.png')} style={styles.logo} />
+        <Image source={require('../assets/logo_wel.png')} style={styles.logo} />
         <Text style={styles.subtitle}>Welcome to Ingredia</Text>
         <Text style={styles.title}>Your Culinary{"\n"}Journey Begins{"\n"}Here</Text>
         <View style={styles.circle}>
-          <Image source={require('../assets/splash-icon.png')} style={styles.circleImage} />
+          <Image source={require('../assets/welcome_image.png')} style={styles.circleImage} />
         </View>
         <View style={styles.buttons}>
           <StyledButton title="Login" variant="secondary" onPress={() => navigation.navigate('Login')} />
+          <View style={styles.buttonSpacer} />
           <StyledButton title="Sign Up" variant="primary" onPress={() => navigation.navigate('SignUp')} />
         </View>
       </View>
@@ -29,11 +30,11 @@ const styles = StyleSheet.create({
     padding: SPACING.lg,
   },
   logo: {
-    width: 64,
-    height: 64,
+    width: 80,
+    height: 80,
     marginTop: SPACING.lg,
     marginBottom: SPACING.md,
-    tintColor: COLORS.primary,
+    resizeMode: 'contain',
   },
   subtitle: {
     color: COLORS.primary,
@@ -43,7 +44,7 @@ const styles = StyleSheet.create({
     color: COLORS.text,
     textAlign: 'center',
     fontSize: 28,
-    fontWeight: '800',
+    fontWeight: '700',
     marginBottom: SPACING.lg,
   },
   circle: {
@@ -64,6 +65,9 @@ const styles = StyleSheet.create({
   buttons: {
     width: '100%',
     marginTop: SPACING.md,
+  },
+  buttonSpacer: {
+    height: SPACING.md,
   },
 });
 

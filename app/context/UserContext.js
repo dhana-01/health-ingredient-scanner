@@ -1,10 +1,8 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 
-// Create the context
 const UserContext = createContext();
 
-// Custom hook to use the context
 export const useUser = () => {
   const context = useContext(UserContext);
   if (!context) {
@@ -13,138 +11,102 @@ export const useUser = () => {
   return context;
 };
 
-// Provider component
 export const UserProvider = ({ children }) => {
+  const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
 
-  // Fetch user profile when component mounts
-  useEffect(() => {
-    const fetchProfile = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-
-        const { data: { session } } = await supabase.auth.getSession();
-        
-        if (session?.user?.id) {
-          const { data: profileData, error: profileError } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', session.user.id)
-            .single();
-
-          if (profileError) {
-            throw profileError;
-          }
-
-          setProfile(profileData);
-        } else {
-          setProfile(null);
-        }
-      } catch (err) {
-        console.error('Error fetching profile:', err);
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchProfile();
-
-    // Listen for auth state changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'SIGNED_IN' && session?.user?.id) {
-        try {
-          const { data: profileData, error: profileError } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', session.user.id)
-            .single();
-
-          if (profileError) {
-            throw profileError;
-          }
-
-          setProfile(profileData);
-        } catch (err) {
-          console.error('Error fetching profile on auth change:', err);
-          setError(err.message);
-        }
-      } else if (event === 'SIGNED_OUT') {
-        setProfile(null);
-        setError(null);
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
-  // Update profile function
-  const updateProfile = async (updates) => {
+  // Fetch user profile with improved error handling
+  const fetchProfile = async (userId) => {
     try {
-      setError(null);
+      console.log('UserContext: Fetching profile for user:', userId);
       
-      if (!profile?.id) {
-        throw new Error('No profile to update');
-      }
-
-      const { data: updatedProfile, error } = await supabase
+      const { data, error } = await supabase
         .from('profiles')
-        .update(updates)
-        .eq('id', profile.id)
-        .select()
-        .single();
+        .select('*')
+        .eq('id', userId)
+        .maybeSingle(); // Use maybeSingle to avoid coercion errors
 
       if (error) {
-        throw error;
+        console.error('UserContext: Profile fetch error:', error.message);
+        return null;
       }
-
-      setProfile(updatedProfile);
-      return { success: true, data: updatedProfile };
-    } catch (err) {
-      console.error('Error updating profile:', err);
-      setError(err.message);
-      return { success: false, error: err.message };
+      
+      console.log('UserContext: Profile fetched successfully:', data ? 'Profile found' : 'No profile');
+      return data;
+    } catch (error) {
+      console.error('UserContext: Profile fetch exception:', error.message);
+      return null;
     }
   };
 
   // Refresh profile function
   const refreshProfile = async () => {
+    if (user?.id) {
+      const updatedProfile = await fetchProfile(user.id);
+      setProfile(updatedProfile);
+      return updatedProfile;
+    }
+    return null;
+  };
+
+  // Update profile function
+  const updateProfile = async (updates) => {
+    if (!user?.id) return { success: false, error: 'No authenticated user' };
+
     try {
-      setLoading(true);
-      setError(null);
+      const { data, error } = await supabase
+        .from('profiles')
+        .update(updates)
+        .eq('id', user.id)
+        .select()
+        .single();
 
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (session?.user?.id) {
-        const { data: profileData, error: profileError } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', session.user.id)
-          .single();
+      if (error) throw error;
 
-        if (profileError) {
-          throw profileError;
-        }
-
-        setProfile(profileData);
-      }
-    } catch (err) {
-      console.error('Error refreshing profile:', err);
-      setError(err.message);
-    } finally {
-      setLoading(false);
+      setProfile(data);
+      return { success: true, data };
+    } catch (error) {
+      console.error('UserContext: Profile update error:', error.message);
+      return { success: false, error: error.message };
     }
   };
 
+  useEffect(() => {
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user || null);
+      if (session?.user) {
+        fetchProfile(session.user.id).then(setProfile);
+      }
+      setLoading(false);
+    });
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        setUser(session?.user || null);
+        if (session?.user) {
+          const userProfile = await fetchProfile(session.user.id);
+          setProfile(userProfile);
+        } else {
+          setProfile(null);
+        }
+        setLoading(false);
+      }
+    );
+
+    return () => subscription.unsubscribe();
+  }, []);
+
   const value = {
+    user,
     profile,
     loading,
-    error,
-    updateProfile,
     refreshProfile,
+    updateProfile,
+    isAuthenticated: !!user,
+    hasCompletedOnboarding: profile?.has_completed_onboarding || false,
   };
 
   return (
@@ -153,6 +115,4 @@ export const UserProvider = ({ children }) => {
     </UserContext.Provider>
   );
 };
-
-export default UserContext;
 

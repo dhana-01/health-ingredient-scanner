@@ -1,5 +1,5 @@
-import React, { useContext } from 'react';
-import { View, Text, StyleSheet, ScrollView, FlatList, TouchableOpacity, Button } from 'react-native';
+import React from 'react';
+import { View, Text, StyleSheet, ScrollView, FlatList, TouchableOpacity } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SPACING, RADIUS } from '../constants/theme';
@@ -52,14 +52,7 @@ export default function HomeScreen() {
     navigation.navigate('History');
   };
 
-  const handleLogAccessToken = async () => {
-    try {
-      const session = await supabase.auth.getSession();
-      console.log('USER ACCESS TOKEN:', session.data.session.access_token);
-    } catch (error) {
-      console.error('Error getting access token:', error);
-    }
-  };
+
 
   const renderScanCard = ({ item }) => (
     <ScanCard
@@ -88,12 +81,7 @@ export default function HomeScreen() {
           <Text style={styles.quickScanText}>Quick Scan</Text>
         </TouchableOpacity>
 
-        {/* Temporary button for testing - Remove after testing */}
-        <Button 
-          title="Log Access Token" 
-          onPress={handleLogAccessToken}
-          color={COLORS.primary}
-        />
+
       </View>
 
       {/* Recent Scans Section */}

@@ -144,15 +144,10 @@ export default function HistoryScreen() {
   }, [activeFilter, searchQuery]);
 
   const handleHistoryItemPress = (item) => {
-    // Navigate to Result screen with the scan data
+    // Navigate to Result screen
     navigation.navigate('Result', { 
-      analysis: {
-        beneficial: item.status === 'beneficial' ? [{ name: item.name, desc: 'Good for health' }] : [],
-        neutral: item.status === 'neutral' ? [{ name: item.name, desc: 'Neutral ingredient' }] : [],
-        harmful: item.status === 'harmful' ? [{ name: item.name, desc: 'May be harmful' }] : [],
-      },
-      imageUrl: item.image,
-      name: item.name
+      analysis: item.analysis_results[0], 
+      imageUrl: item.image_url 
     });
   };
 

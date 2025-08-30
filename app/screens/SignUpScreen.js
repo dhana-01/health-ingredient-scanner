@@ -14,8 +14,18 @@ export default function SignUpScreen() {
   const [agreed, setAgreed] = useState(false);
 
   const handleSignUp = async () => {
+    if (!fullName || !email || !password || !confirmPassword) {
+      Alert.alert('Error', 'Please fill in all fields');
+      return;
+    }
+
     if (password !== confirmPassword) {
       Alert.alert('Error', 'Passwords do not match');
+      return;
+    }
+
+    if (!agreed) {
+      Alert.alert('Error', 'Please agree to the Terms of Service and Privacy Policy');
       return;
     }
 
@@ -23,12 +33,18 @@ export default function SignUpScreen() {
       const { error } = await supabase.auth.signUp({
         email,
         password,
+        options: {
+          data: {
+            full_name: fullName,
+          }
+        }
       });
 
       if (error) {
         Alert.alert('Error', error.message);
       } else {
         Alert.alert('Success', 'Account created successfully! Please check your email for verification.');
+        // Navigation will happen automatically via AppNavigator's auth state listener
       }
     } catch (error) {
       Alert.alert('Error', 'An unexpected error occurred');

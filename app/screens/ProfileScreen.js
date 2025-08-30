@@ -52,7 +52,7 @@ export default function ProfileScreen() {
         {/* User Info Card */}
         <View style={styles.userCard}>
           <Image
-            source={require('../assets/logo.png')} // Placeholder - replace with actual profile image
+            source={require('../assets/profile11.png')} // Placeholder - replace with actual profile image
             style={styles.profileImage}
           />
           <Text style={styles.userName}>
