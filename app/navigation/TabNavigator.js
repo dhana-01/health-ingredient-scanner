@@ -35,9 +35,9 @@ export default function TabNavigator() {
           backgroundColor: COLORS.background,
           borderTopColor: COLORS.inputBackground,
           borderTopWidth: 1,
-          paddingBottom: 5,
+          paddingBottom: 15,
           paddingTop: 5,
-          height: 60,
+          height: 70,
         },
         headerShown: false,
       })}

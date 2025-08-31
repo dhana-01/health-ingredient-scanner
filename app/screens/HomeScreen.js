@@ -9,35 +9,68 @@ import ScreenHeader from '../components/ScreenHeader';
 import { supabase } from '../lib/supabase';
 
 export default function HomeScreen() {
-  const { profile } = useUser();
+  const { profile, user, refreshProfile } = useUser();
   const navigation = useNavigation();
+
+  // Debug: Log the profile data to see what's available
+  console.log('HomeScreen - Profile data:', profile);
+  console.log('HomeScreen - User data:', user);
+  console.log('HomeScreen - Profile first_name:', profile?.first_name);
+  console.log('HomeScreen - Profile full_name:', profile?.full_name);
+  console.log('HomeScreen - User metadata full_name:', user?.user_metadata?.full_name);
+
+  // Get the user's name from profile or user metadata
+  const getUserName = () => {
+    // Try profile fields first
+    if (profile?.first_name) return profile.first_name;
+    if (profile?.full_name) return profile.full_name;
+    
+    // Fallback to user metadata (from signup)
+    if (user?.user_metadata?.full_name) {
+      const fullName = user.user_metadata.full_name;
+      // Extract first name from full name
+      return fullName.split(' ')[0];
+    }
+    
+    return 'User';
+  };
+
+  const userName = getUserName();
+
+  // Refresh profile when component mounts to ensure we have the latest data
+  React.useEffect(() => {
+    if (user && !profile?.first_name && !profile?.full_name) {
+      console.log('HomeScreen: Refreshing profile to get user name');
+      refreshProfile();
+    }
+  }, [user, profile, refreshProfile]);
 
   // Dummy data for recent scans
   const recentScans = [
     {
       id: '1',
-      imageSource: require('../assets/icon.png'),
+      imageSource: require('../assets/protein.jpeg'),
       productName: 'Protein Bar Pro',
       timestamp: '2 hours ago',
       healthScore: 85,
     },
     {
       id: '2',
-      imageSource: require('../assets/adaptive-icon.png'),
+      imageSource: require('../assets/organic.jpg'),
       productName: 'Organic Granola',
       timestamp: '1 day ago',
       healthScore: 92,
     },
     {
       id: '3',
-      imageSource: require('../assets/splash-icon.png'),
+      imageSource: require('../assets/bread.jpg'),
       productName: 'Whole Grain Bread',
       timestamp: '3 days ago',
       healthScore: 78,
     },
     {
       id: '4',
-      imageSource: require('../assets/icon.png'),
+      imageSource: require('../assets/avacado.jpeg'),
       productName: 'Fresh Avocado',
       timestamp: '1 week ago',
       healthScore: 95,
@@ -73,7 +106,7 @@ export default function HomeScreen() {
 
       {/* Top Container with Greeting and Quick Scan */}
       <View style={styles.topContainer}>
-        <Text style={styles.greeting}>Hello, {profile?.first_name || 'User'} !</Text>
+        <Text style={styles.greeting}>Hello, {userName} !</Text>
         <Text style={styles.subtitle}>Ready to discover what's in your food?</Text>
 
         <TouchableOpacity style={styles.quickScanButton} onPress={handleQuickScan}>

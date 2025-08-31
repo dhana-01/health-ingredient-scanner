@@ -65,10 +65,18 @@ export default function ResultScreen() {
     try {
       setIsSaving(true);
 
+      // Ensure the analysis object includes the product name
+      const analysisWithProductName = {
+        ...analysis,
+        productName: productName
+      };
+
+      console.log('Sending analysis with product name:', analysisWithProductName);
+
       // Call our new Edge Function to save the scan
       const { data: saveData, error: saveError } = await supabase.functions.invoke('save-scan-history', {
         body: { 
-          analysis: analysis, 
+          analysis: analysisWithProductName, 
           imageBase64: imageBase64 
         },
       });

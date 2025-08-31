@@ -1,9 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SPACING, RADIUS } from '../constants/theme';
 
 export default function HistoryItem({ item, onPress }) {
+  const [imageError, setImageError] = useState(false);
+
   const getStatusIcon = (status) => {
     switch (status) {
       case 'beneficial':
@@ -19,6 +21,15 @@ export default function HistoryItem({ item, onPress }) {
 
   const statusIcon = getStatusIcon(item.status);
 
+  // Use the image from Supabase storage or fallback to a placeholder
+  const imageSource = item.image_url && !imageError
+    ? { uri: item.image_url }
+    : require('../assets/icon.png'); // Fallback image
+
+  const handleImageError = () => {
+    setImageError(true);
+  };
+
   return (
     <TouchableOpacity 
       style={styles.container}
@@ -26,17 +37,18 @@ export default function HistoryItem({ item, onPress }) {
       activeOpacity={0.8}
     >
       <Image 
-        source={item.image} 
+        source={imageSource} 
         style={styles.image}
         resizeMode="cover"
+        onError={handleImageError}
       />
       
       <View style={styles.content}>
         <Text style={styles.name} numberOfLines={2}>
-          {item.name}
+          {item.product_name || 'Unknown Product'}
         </Text>
         <Text style={styles.date}>
-          {item.date}
+          {item.formattedDate || 'Unknown Date'}
         </Text>
       </View>
       
