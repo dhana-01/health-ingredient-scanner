@@ -23,7 +23,7 @@ export default function SplashScreen() {
     <ScreenContainer style={styles.screen}>
       <View style={styles.content}>
         <Image
-          source={require('../assets/logo.png')}
+          source={require('../assets/logo_wel.png')}
           style={styles.logo}
         />
         <Text style={styles.title}>INGREDIA</Text>

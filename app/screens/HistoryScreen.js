@@ -6,95 +6,26 @@ import {
   TextInput, 
   ScrollView, 
   TouchableOpacity, 
-  FlatList 
+  FlatList,
+  ActivityIndicator,
+  RefreshControl
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import ScreenContainer from '../components/ScreenContainer';
 import HistoryItem from '../components/HistoryItem';
 import ScreenHeader from '../components/ScreenHeader';
 import { COLORS, SPACING, RADIUS } from '../constants/theme';
+import { supabase } from '../lib/supabase';
 
 export default function HistoryScreen() {
   const navigation = useNavigation();
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState('All');
-
-  // Dummy data for history items
-  const dummyHistoryData = [
-    {
-      id: '1',
-      name: 'Organic Almond Milk',
-      date: 'October 26, 2023',
-      status: 'beneficial',
-      category: 'dairy',
-      image: require('../assets/icon.png'),
-    },
-    {
-      id: '2',
-      name: 'Whole Grain Bread',
-      date: 'October 25, 2023',
-      status: 'beneficial',
-      category: 'grains',
-      image: require('../assets/adaptive-icon.png'),
-    },
-    {
-      id: '3',
-      name: 'Protein Bar, Chocolate',
-      date: 'October 24, 2023',
-      status: 'neutral',
-      category: 'snacks',
-      image: require('../assets/splash-icon.png'),
-    },
-    {
-      id: '4',
-      name: 'Natural Greek Yogurt',
-      date: 'October 23, 2023',
-      status: 'beneficial',
-      category: 'dairy',
-      image: require('../assets/logo.png'),
-    },
-    {
-      id: '5',
-      name: 'Sparkling Water',
-      date: 'October 22, 2023',
-      status: 'neutral',
-      category: 'beverages',
-      image: require('../assets/icon.png'),
-    },
-    {
-      id: '6',
-      name: 'Organic Honey Oats',
-      date: 'October 21, 2023',
-      status: 'beneficial',
-      category: 'grains',
-      image: require('../assets/adaptive-icon.png'),
-    },
-    {
-      id: '7',
-      name: 'Fresh Avocados (2)',
-      date: 'October 20, 2023',
-      status: 'beneficial',
-      category: 'produce',
-      image: require('../assets/splash-icon.png'),
-    },
-    {
-      id: '8',
-      name: 'High-Fructose Corn Syrup',
-      date: 'October 19, 2023',
-      status: 'harmful',
-      category: 'sweeteners',
-      image: require('../assets/logo.png'),
-    },
-    {
-      id: '9',
-      name: 'Hydrogenated Vegetable Oil',
-      date: 'October 18, 2023',
-      status: 'harmful',
-      category: 'oils',
-      image: require('../assets/icon.png'),
-    },
-  ];
+  const [scans, setScans] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   const filters = [
     { id: 'All', label: 'All' },
@@ -103,6 +34,78 @@ export default function HistoryScreen() {
     { id: 'Neutral', label: 'Neutral' },
   ];
 
+  // Fetch history data from Supabase
+  const fetchHistory = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      // Fetch scans with analysis results
+      const { data, error: fetchError } = await supabase
+        .from('scans')
+        .select(`
+          *,
+          analysis_results (
+            beneficial,
+            harmful,
+            neutral,
+            summary
+          )
+        `)
+        .order('created_at', { ascending: false });
+
+      if (fetchError) {
+        throw fetchError;
+      }
+
+      // Process the data to determine status for filtering
+      const processedScans = data?.map(scan => {
+        const analysis = scan.analysis_results?.[0];
+        let status = 'neutral';
+        
+        if (analysis) {
+          if (analysis.harmful && analysis.harmful.length > 0) {
+            status = 'harmful';
+          } else if (analysis.beneficial && analysis.beneficial.length > 0) {
+            status = 'beneficial';
+          }
+        }
+        
+        return {
+          ...scan,
+          status,
+          // Format the date for display
+          formattedDate: new Date(scan.created_at).toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+          })
+        };
+      }) || [];
+
+      setScans(processedScans);
+    } catch (err) {
+      console.error('Error fetching history:', err);
+      setError(err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Fetch data every time the screen comes into focus
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchHistory();
+    }, [])
+  );
+
+  // Pull to refresh handler
+  const onRefresh = React.useCallback(async () => {
+    setRefreshing(true);
+    await fetchHistory();
+    setRefreshing(false);
+  }, []);
+
   // Handler function for filter selection
   const handleFilterSelect = (filter) => {
     setActiveFilter(filter);
@@ -110,7 +113,7 @@ export default function HistoryScreen() {
 
   // Filter the data based on active filter and search query
   const filteredScans = useMemo(() => {
-    let filtered = dummyHistoryData;
+    let filtered = scans;
 
     // Apply status filter using switch statement
     switch (activeFilter) {
@@ -136,22 +139,21 @@ export default function HistoryScreen() {
     // Apply search filter
     if (searchQuery.trim()) {
       filtered = filtered.filter(item => 
-        item.name.toLowerCase().includes(searchQuery.toLowerCase())
+        item.product_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.formattedDate?.toLowerCase().includes(searchQuery.toLowerCase())
       );
     }
 
     return filtered;
-  }, [activeFilter, searchQuery]);
+  }, [activeFilter, searchQuery, scans]);
 
   const handleHistoryItemPress = (item) => {
-    // Navigate to Result screen
+    // Navigate to Result screen with the scan data
     navigation.navigate('Result', { 
-      analysis: item.analysis_results[0], 
+      analysis: item.analysis_results?.[0] || {}, 
       imageUrl: item.image_url 
     });
   };
-
-
 
   const renderHistoryItem = ({ item }) => (
     <HistoryItem 
@@ -159,6 +161,34 @@ export default function HistoryScreen() {
       onPress={() => handleHistoryItemPress(item)}
     />
   );
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <ScreenContainer>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={COLORS.primary} />
+          <Text style={styles.loadingText}>Loading your scan history...</Text>
+        </View>
+      </ScreenContainer>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <ScreenContainer>
+        <View style={styles.errorContainer}>
+          <Ionicons name="alert-circle" size={48} color={COLORS.danger} />
+          <Text style={styles.errorTitle}>Something went wrong</Text>
+          <Text style={styles.errorMessage}>{error}</Text>
+          <TouchableOpacity style={styles.retryButton} onPress={fetchHistory}>
+            <Text style={styles.retryButtonText}>Try Again</Text>
+          </TouchableOpacity>
+        </View>
+      </ScreenContainer>
+    );
+  }
 
   return (
     <ScreenContainer>
@@ -211,14 +241,30 @@ export default function HistoryScreen() {
           </Text>
         </View>
 
-        {/* History List */}
-        <FlatList
-          data={filteredScans}
-          renderItem={renderHistoryItem}
-          keyExtractor={(item) => item.id}
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.listContainer}
-        />
+        {/* History List or Empty State */}
+        {filteredScans.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <Ionicons name="scan-outline" size={64} color={COLORS.secondaryText} />
+            <Text style={styles.emptyTitle}>No scans yet</Text>
+            <Text style={styles.emptyMessage}>Your scan history will appear here</Text>
+          </View>
+        ) : (
+          <FlatList
+            data={filteredScans}
+            renderItem={renderHistoryItem}
+            keyExtractor={(item) => item.id}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.listContainer}
+            refreshControl={
+              <RefreshControl 
+                refreshing={refreshing} 
+                onRefresh={onRefresh}
+                colors={[COLORS.primary]}
+                tintColor={COLORS.primary}
+              />
+            }
+          />
+        )}
       </View>
     </ScreenContainer>
   );
@@ -280,5 +326,67 @@ const styles = StyleSheet.create({
   },
   listContainer: {
     paddingBottom: SPACING.xl * 2, // Extra padding for bottom nav
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: SPACING.lg,
+  },
+  loadingText: {
+    marginTop: SPACING.sm,
+    color: COLORS.secondaryText,
+    fontSize: 16,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: SPACING.lg,
+  },
+  errorTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: COLORS.text,
+    marginTop: SPACING.sm,
+    textAlign: 'center',
+  },
+  errorMessage: {
+    color: COLORS.secondaryText,
+    fontSize: 16,
+    textAlign: 'center',
+    marginTop: SPACING.sm,
+    marginBottom: SPACING.md,
+  },
+  retryButton: {
+    backgroundColor: COLORS.primary,
+    paddingVertical: SPACING.sm,
+    paddingHorizontal: SPACING.lg,
+    borderRadius: RADIUS.md,
+  },
+  retryButtonText: {
+    color: COLORS.white,
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: SPACING.lg,
+  },
+  emptyTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: COLORS.text,
+    marginTop: SPACING.sm,
+    textAlign: 'center',
+  },
+  emptyMessage: {
+    color: COLORS.secondaryText,
+    fontSize: 16,
+    textAlign: 'center',
+    marginTop: SPACING.sm,
+    marginBottom: SPACING.md,
   },
 });

@@ -40,10 +40,70 @@ export const UserProvider = ({ children }) => {
     }
   };
 
+  // Create or update profile with user metadata
+  const ensureProfile = async (userId, userMetadata) => {
+    try {
+      console.log('UserContext: Ensuring profile exists for user:', userId);
+      
+      // First try to fetch existing profile
+      let profile = await fetchProfile(userId);
+      
+      if (!profile) {
+        // Profile doesn't exist, create it
+        console.log('UserContext: Creating new profile for user:', userId);
+        const { data, error } = await supabase
+          .from('profiles')
+          .insert({
+            id: userId,
+            full_name: userMetadata?.full_name || null,
+            first_name: userMetadata?.full_name?.split(' ')[0] || null,
+            has_completed_onboarding: false,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          })
+          .select()
+          .single();
+
+        if (error) {
+          console.error('UserContext: Profile creation error:', error.message);
+          return null;
+        }
+        
+        profile = data;
+        console.log('UserContext: Profile created successfully');
+      } else if (userMetadata?.full_name && !profile.full_name) {
+        // Profile exists but doesn't have name, update it
+        console.log('UserContext: Updating profile with name for user:', userId);
+        const { data, error } = await supabase
+          .from('profiles')
+          .update({
+            full_name: userMetadata.full_name,
+            first_name: userMetadata.full_name.split(' ')[0],
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', userId)
+          .select()
+          .single();
+
+        if (error) {
+          console.error('UserContext: Profile update error:', error.message);
+        } else {
+          profile = data;
+          console.log('UserContext: Profile updated with name successfully');
+        }
+      }
+      
+      return profile;
+    } catch (error) {
+      console.error('UserContext: Profile ensure error:', error.message);
+      return null;
+    }
+  };
+
   // Refresh profile function
   const refreshProfile = async () => {
     if (user?.id) {
-      const updatedProfile = await fetchProfile(user.id);
+      const updatedProfile = await ensureProfile(user.id, user.user_metadata);
       setProfile(updatedProfile);
       return updatedProfile;
     }
@@ -74,10 +134,12 @@ export const UserProvider = ({ children }) => {
 
   useEffect(() => {
     // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       setUser(session?.user || null);
       if (session?.user) {
-        fetchProfile(session.user.id).then(setProfile);
+        // Ensure profile exists and has user's name
+        const userProfile = await ensureProfile(session.user.id, session.user.user_metadata);
+        setProfile(userProfile);
       }
       setLoading(false);
     });
@@ -87,7 +149,8 @@ export const UserProvider = ({ children }) => {
       async (event, session) => {
         setUser(session?.user || null);
         if (session?.user) {
-          const userProfile = await fetchProfile(session.user.id);
+          // Ensure profile exists and has user's name
+          const userProfile = await ensureProfile(session.user.id, session.user.user_metadata);
           setProfile(userProfile);
         } else {
           setProfile(null);

@@ -17,19 +17,19 @@ export default function IntroOnboardingScreen({ navigation }) {
       id: 1,
       title: 'Scan your food instantly',
       description: 'Discover a smarter way to understand your food. Ingredia helps you make informed choices effortlessly.',
-      image: require('../assets/splash-icon.png'),
+      image: require('../assets/scanfood.jpg'),
     },
     {
       id: 2,
       title: 'Get ingredient insights',
       description: 'AI-powered analysis reveals hidden ingredients, nutritional values, and potential allergens in your food.',
-      image: require('../assets/icon.png'),
+      image: require('../assets/ingrediant.jpg'),
     },
     {
       id: 3,
       title: 'Shop smarter, live healthier',
       description: 'Make better grocery choices with personalized recommendations based on your dietary preferences and goals.',
-      image: require('../assets/adaptive-icon.png'),
+      image: require('../assets/shop.jpg'),
     },
   ];
 
