@@ -21,11 +21,10 @@ jobs:
           cache: 'npm'
           cache-dependency-path: app/package-lock.json
 
-      - name: Change to app directory
-        run: cd app
-
       - name: Install dependencies
-        run: npm ci
+        working-directory: ./app
+        run: npm install
 
       - name: Run tests
+        working-directory: ./app
         run: npm test
