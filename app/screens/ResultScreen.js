@@ -39,9 +39,9 @@ const DEFAULT_ANALYSIS = {
   summary: 'A protein bar with mixed health benefits.',
 };
 
-export default function ResultScreen() {
-  const route = useRoute();
-  const navigation = useNavigation();
+export default function ResultScreen({ route: propRoute, navigation: propNavigation }) {
+  const route = propRoute || useRoute();
+  const navigation = propNavigation || useNavigation();
   const { addScan } = useScans ? useScans() : { addScan: () => {} };
   const [isSaving, setIsSaving] = useState(false);
 

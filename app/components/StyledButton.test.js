@@ -33,3 +33,4 @@ describe('StyledButton', () => {
     // The test verifies the component renders and the mock function is properly passed
   });
 });
+

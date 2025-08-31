@@ -33,6 +33,9 @@ serve(async (req) => {
       throw new Error('imageBase64 is required in the request body.');
     }
 
+    // Log the analysis object to help with debugging
+    console.log('Received analysis object:', JSON.stringify(analysis, null, 2));
+
     // Create a Supabase client with the user's authentication token
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL')!,
@@ -79,11 +82,15 @@ serve(async (req) => {
 
     // --- Database Operations ---
     // First, insert into scans table
+    const productName = analysis.productName || analysis.name || analysis.title || 'Unknown Product';
+    console.log('Saving product name:', productName);
+    
     const { data: scanData, error: scanError } = await supabaseClient
       .from('scans')
       .insert({ 
         user_id: user.id, 
         image_url: imageUrl,
+        product_name: productName, // Save product name from analysis with fallbacks
         raw_text: analysis.summary || 'No text available' // Use summary as fallback
       })
       .select()
@@ -113,7 +120,8 @@ serve(async (req) => {
       success: true,
       message: 'Scan saved successfully',
       scanId: scanData.id,
-      imageUrl: imageUrl
+      imageUrl: imageUrl,
+      productName: productName // Include the saved product name in response
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
