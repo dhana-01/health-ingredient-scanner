@@ -10,10 +10,7 @@ This project was built from the ground up with a modern, professional technology
 
 | Onboarding | Home Screen | Scan & Result |
 |------------|-------------|---------------|
-| ![WhatsApp Image 2025-08-31 at 7 00 10 PM](https://github.com/user-attachments/assets/ea16f80a-0b22-4fc2-9e19-fd99a3466a53)
- | ![WhatsApp Image 2025-08-31 at 7 00 08 PM (1)](https://github.com/user-attachments/assets/b2795960-34e1-4105-88dc-1fa0708be2ff)
- | ![WhatsApp Image 2025-08-31 at 7 00 08 PM](https://github.com/user-attachments/assets/62bab0bc-c3e1-4d8d-a6c5-afdb42d549e4)
- |
+| ![WhatsApp Image 2025-08-31 at 7 00 10 PM](https://github.com/user-attachments/assets/ea16f80a-0b22-4fc2-9e19-fd99a3466a53)| ![WhatsApp Image 2025-08-31 at 7 00 08 PM (1)](https://github.com/user-attachments/assets/b2795960-34e1-4105-88dc-1fa0708be2ff)| ![WhatsApp Image 2025-08-31 at 7 00 08 PM](https://github.com/user-attachments/assets/62bab0bc-c3e1-4d8d-a6c5-afdb42d549e4)|
 
 ## ✨ Key Features
 - 📸 **AI-Powered Ingredient Scanning:** Scan food labels in real-time using the device's camera.  
