@@ -6,7 +6,6 @@ Ingredia is a full-stack, AI-powered mobile application designed to bring clarit
 This project was built from the ground up with a modern, professional technology stack, featuring a sophisticated "Dual LLM" AI backend, a secure and scalable serverless architecture, and a complete CI/CD pipeline for automated testing and quality assurance.
 
 ## 📸 App Demo & Screenshots
-(This is a great place to add a GIF of your app in action! You can use a tool like Giphy Capture or ScreenToGif to record your simulator.)
 
 | Onboarding | Home Screen | Scan & Result |
 |------------|-------------|---------------|
